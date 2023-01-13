@@ -1,15 +1,15 @@
 <component name="ProjectCodeStyleConfiguration">
   <code_scheme name="Project" version="173">
     <JavaCodeStyleSettings>
-      <option name="SPACE_BEFORE_OPENING_ANGLE_BRACKET_IN_TYPE_PARAMETER" value="true" />
+      <option name="GENERATE_FINAL_LOCALS" value="true" />
+      <option name="GENERATE_FINAL_PARAMETERS" value="true" />
+      <option name="SPACE_AFTER_CLOSING_ANGLE_BRACKET_IN_TYPE_ARGUMENT" value="true" />
+      <option name="CLASS_NAMES_IN_JAVADOC" value="3" />
+      <option name="JD_DO_NOT_WRAP_ONE_LINE_COMMENTS" value="true" />
     </JavaCodeStyleSettings>
     <JetCodeStyleSettings>
       <option name="PACKAGES_TO_USE_STAR_IMPORTS">
-        <value>
-          <package name="java.util" alias="false" withSubpackages="true" />
-          <package name="kotlinx.android.synthetic" alias="false" withSubpackages="true" />
-          <package name="io.ktor" alias="false" withSubpackages="true" />
-        </value>
+        <value />
       </option>
       <option name="NAME_COUNT_TO_USE_STAR_IMPORT" value="2147483647" />
       <option name="NAME_COUNT_TO_USE_STAR_IMPORT_FOR_MEMBERS" value="2147483647" />
@@ -32,12 +32,13 @@
       </indentOptions>
     </codeStyleSettings>
     <codeStyleSettings language="JAVA">
-      <option name="SPACE_BEFORE_METHOD_CALL_PARENTHESES" value="true" />
-      <option name="SPACE_BEFORE_METHOD_PARENTHESES" value="true" />
       <option name="IF_BRACE_FORCE" value="3" />
       <option name="DOWHILE_BRACE_FORCE" value="3" />
       <option name="FOR_BRACE_FORCE" value="3" />
       <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
         <option name="KEEP_INDENTS_ON_EMPTY_LINES" value="true" />
       </indentOptions>
       <arrangement>
@@ -52,7 +53,7 @@
           </group>
           <group>
             <type>DEPENDENT_METHODS</type>
-            <order>BREADTH_FIRST</order>
+            <order>DEPTH_FIRST</order>
           </group>
         </groups>
         <rules>
@@ -515,7 +516,9 @@
     <codeStyleSettings language="XML">
       <option name="FORCE_REARRANGE_MODE" value="1" />
       <indentOptions>
-        <option name="CONTINUATION_INDENT_SIZE" value="4" />
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
       </indentOptions>
       <arrangement>
         <rules>
@@ -637,6 +640,9 @@
       <option name="METHOD_CALL_CHAIN_WRAP" value="0" />
       <option name="ASSIGNMENT_WRAP" value="0" />
       <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
         <option name="KEEP_INDENTS_ON_EMPTY_LINES" value="true" />
       </indentOptions>
     </codeStyleSettings>

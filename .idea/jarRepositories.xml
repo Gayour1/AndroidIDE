@@ -19,7 +19,7 @@
     <remote-repository>
       <option name="id" value="MavenLocal" />
       <option name="name" value="MavenLocal" />
-      <option name="url" value="file:/$PROJECT_DIR$/../../../Akash%20Yadav/.m2/repository/" />
+      <option name="url" value="file:/$USER_HOME$/Akash%20Yadav/.m2/repository/" />
     </remote-repository>
     <remote-repository>
       <option name="id" value="maven" />
@@ -55,6 +55,31 @@
       <option name="id" value="maven2" />
       <option name="name" value="maven2" />
       <option name="url" value="https://repo.gradle.org/gradle/libs-releases/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven2" />
+      <option name="name" value="maven2" />
+      <option name="url" value="https://repo.eclipse.org/content/repositories/lemminx-snapshots/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="MavenLocal" />
+      <option name="name" value="MavenLocal" />
+      <option name="url" value="file:$USER_HOME$/.m2/repository" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven2" />
+      <option name="name" value="maven2" />
+      <option name="url" value="https://s01.oss.sonatype.org/content/repositories/snapshots/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven2" />
+      <option name="name" value="maven2" />
+      <option name="url" value="https://maven.google.com" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="Gradle Central Plugin Repository" />
+      <option name="name" value="Gradle Central Plugin Repository" />
+      <option name="url" value="https://plugins.gradle.org/m2" />
     </remote-repository>
   </component>
 </project>

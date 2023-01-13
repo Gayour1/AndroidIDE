@@ -17,30 +17,30 @@
 
 package com.itsaky.androidide.actions
 
-import com.itsaky.androidide.views.editor.CodeEditorView
-import com.itsaky.androidide.views.editor.IDEEditor
+import com.itsaky.androidide.ui.editor.CodeEditorView
+import com.itsaky.androidide.editor.ui.IDEEditor
 
 /** @author Akash Yadav */
-abstract class EditorRelatedAction : EditorActivityAction() {
+abstract class EditorRelatedAction : EditorActivityAction(), EditorActionItem {
 
-    override var requiresUIThread: Boolean = true
+  override var requiresUIThread: Boolean = true
 
-    override fun prepare(data: ActionData) {
-        val editor =
-            getEditor(data)
-                ?: run {
-                    visible = false
-                    enabled = false
-                    return
-                }
+  override fun prepare(data: ActionData) {
+    val editor =
+      getEditor(data)
+        ?: run {
+          visible = false
+          enabled = false
+          return
+        }
 
-        val file = editor.file
+    val file = editor.file
 
-        visible = file != null
-        enabled = visible
-    }
+    visible = file != null
+    enabled = visible
+  }
 
-    fun getEditor(data: ActionData): IDEEditor? = data.get(IDEEditor::class.java)
+  fun getEditor(data: ActionData): IDEEditor? = data.get(IDEEditor::class.java)
 
-    fun getEditorView(data: ActionData): CodeEditorView? = data[CodeEditorView::class.java]
+  fun getEditorView(data: ActionData): CodeEditorView? = data[CodeEditorView::class.java]
 }

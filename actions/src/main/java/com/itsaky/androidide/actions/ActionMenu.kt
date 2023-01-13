@@ -23,14 +23,23 @@ package com.itsaky.androidide.actions
  */
 interface ActionMenu : ActionItem {
 
-    val children: MutableSet<ActionItem>
+  val children: MutableSet<ActionItem>
 
-    fun addAction(action: ActionItem) = children.add(action)
+  fun addAction(action: ActionItem) = children.add(action)
 
-    fun removeAction(action: ActionItem) = children.remove(action)
+  fun removeAction(action: ActionItem) = children.remove(action)
 
-    /** Action menus are not supposed to perform any action */
-    override fun execAction(data: ActionData): Boolean {
-        return false
-    }
+  /**
+   * Find the action item with the given action ID.
+   *
+   * @return The action item or `null` if not found.
+   */
+  fun findAction(id: String): ActionItem? {
+    return children.find { it.id == id }
+  }
+
+  /** Action menus are not supposed to perform any action */
+  override fun execAction(data: ActionData): Boolean {
+    return false
+  }
 }

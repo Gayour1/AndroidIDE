@@ -21,21 +21,21 @@ import androidx.annotation.DrawableRes;
 
 public interface IconTextListItem {
 
-    String getText();
+  public static IconTextListItem create(String name, @DrawableRes int icon) {
+    return new IconTextListItem() {
+      @Override
+      public String getText() {
+        return name;
+      }
 
-    int getIconResource();
+      @Override
+      public int getIconResource() {
+        return icon;
+      }
+    };
+  }
 
-    public static IconTextListItem create(String name, @DrawableRes int icon) {
-        return new IconTextListItem() {
-            @Override
-            public String getText() {
-                return name;
-            }
+  String getText();
 
-            @Override
-            public int getIconResource() {
-                return icon;
-            }
-        };
-    }
+  int getIconResource();
 }

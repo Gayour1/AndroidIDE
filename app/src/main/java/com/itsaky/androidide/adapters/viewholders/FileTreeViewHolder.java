@@ -21,93 +21,101 @@
 package com.itsaky.androidide.adapters.viewholders;
 
 import android.content.Context;
-import android.graphics.PorterDuff;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 
-import androidx.core.content.ContextCompat;
+import androidx.transition.ChangeImageTransform;
+import androidx.transition.TransitionManager;
 
-import com.itsaky.androidide.R;
-import com.itsaky.androidide.app.StudioActivity;
+import com.blankj.utilcode.util.ImageUtils;
+import com.blankj.utilcode.util.SizeUtils;
 import com.itsaky.androidide.databinding.LayoutFiletreeItemBinding;
-import com.itsaky.androidide.utils.Environment;
+import com.itsaky.androidide.models.FileExtension;
+import com.itsaky.androidide.resources.R;
 import com.unnamed.b.atv.model.TreeNode;
 
 import java.io.File;
 
 public class FileTreeViewHolder extends TreeNode.BaseNodeViewHolder<File> {
 
-    private Context context;
-    private ImageView chevron;
-    private LayoutFiletreeItemBinding binding;
+  private LayoutFiletreeItemBinding binding;
 
-    public FileTreeViewHolder(Context context) {
-        super(context);
-        this.context = context;
+  public FileTreeViewHolder(Context context) {
+    super(context);
+  }
+
+  @Override
+  public View createNodeView(TreeNode node, File file) {
+    this.binding = LayoutFiletreeItemBinding.inflate(LayoutInflater.from(context));
+
+    final var dp15 = SizeUtils.dp2px(15);
+    final var icon = getIconForFile(file);
+    final var chevron = binding.filetreeChevron;
+    binding.filetreeName.setText(file.getName());
+    binding.filetreeIcon.setImageResource(icon);
+
+    final var root = applyPadding(node, binding, dp15);
+    chevron.setVisibility(file.isFile() ? View.INVISIBLE : View.VISIBLE);
+
+    updateChevronIcon(node.isExpanded());
+
+    return root;
+  }
+
+  private void updateChevronIcon(boolean expanded) {
+    final int chevronIcon;
+    if (expanded) {
+      chevronIcon = R.drawable.ic_chevron_down;
+    } else {
+      chevronIcon = R.drawable.ic_chevron_right;
     }
 
-    @Override
-    public View createNodeView(TreeNode node, File file) {
-        binding = LayoutFiletreeItemBinding.inflate(LayoutInflater.from(context));
-        int dp15 =
-                context instanceof StudioActivity
-                        ? ((StudioActivity) context).dpToPx(15)
-                        : (int)
-                                (TypedValue.applyDimension(
-                                        TypedValue.COMPLEX_UNIT_DIP,
-                                        15,
-                                        context.getResources().getDisplayMetrics()));
-        int icon = 0;
-        if (file.isDirectory()) icon = R.drawable.ic_folder;
-        else if (file.getName().endsWith(".java")) icon = R.drawable.ic_language_java;
-        else if (file.getName().endsWith(".kt")) icon = R.drawable.ic_language_kotlin;
-        else if (file.getName().endsWith(".xml")) icon = R.drawable.ic_language_xml;
-        else if (file.getName().endsWith(".gradle")) icon = R.drawable.ic_language_gradle;
-        else if (file.getName().endsWith(".json")) icon = R.drawable.ic_language_json;
-        else icon = R.drawable.ic_file_unknown;
+    TransitionManager.beginDelayedTransition(binding.getRoot(), new ChangeImageTransform());
+    binding.filetreeChevron.setImageResource(chevronIcon);
+  }
 
-        final boolean isGradle =
-                file.getAbsolutePath().equals(Environment.GRADLE_USER_HOME.getAbsolutePath());
-        chevron = binding.getRoot().findViewById(R.id.filetree_chevron);
-        binding.filetreeName.setText(isGradle ? "GRADLE_HOME" : file.getName());
-        binding.filetreeIcon.setImageResource(icon);
-        binding.getRoot()
-                .setPadding(
-                        binding.getRoot().getPaddingLeft() + (dp15 * (node.getLevel() - 1)),
-                        binding.getRoot().getPaddingTop(),
-                        binding.getRoot().getPaddingRight(),
-                        binding.getRoot().getPaddingBottom());
-        chevron.setVisibility(file.isFile() ? View.INVISIBLE : View.VISIBLE);
-        chevron.setImageResource(
-                node.isExpanded() ? R.drawable.ic_chevron_down : R.drawable.ic_chevron_right);
-        chevron.getDrawable()
-                .setColorFilter(
-                        ContextCompat.getColor(context, R.color.secondaryLightColor),
-                        PorterDuff.Mode.SRC_ATOP);
-        binding.filetreeIcon
-                .getDrawable()
-                .setColorFilter(
-                        ContextCompat.getColor(context, R.color.secondaryLightColor),
-                        PorterDuff.Mode.SRC_ATOP);
+  protected LinearLayout applyPadding(
+      final TreeNode node, final LayoutFiletreeItemBinding binding, final int padding) {
+    final var root = binding.getRoot();
+    root.setPaddingRelative(
+        root.getPaddingLeft() + (padding * (node.getLevel() - 1)),
+        root.getPaddingTop(),
+        root.getPaddingRight(),
+        root.getPaddingBottom());
+    return root;
+  }
 
-        return binding.getRoot();
+  protected int getIconForFile(final File file) {
+
+    if (file.isDirectory()) {
+      return R.drawable.ic_folder;
     }
 
-    public void setLoading() {
-        chevron.getDrawable()
-                .setColorFilter(
-                        ContextCompat.getColor(context, R.color.secondaryLightColor),
-                        PorterDuff.Mode.SRC_ATOP);
+    if (ImageUtils.isImage(file)) {
+      return R.drawable.ic_file_image;
     }
 
-    public void updateChevron(boolean isExpanded) {
-        chevron.setImageResource(
-                isExpanded ? R.drawable.ic_chevron_down : R.drawable.ic_chevron_right);
-        chevron.getDrawable()
-                .setColorFilter(
-                        ContextCompat.getColor(context, R.color.secondaryLightColor),
-                        PorterDuff.Mode.SRC_ATOP);
+    if ("gradlew".equals(file.getName()) || "gradlew.bat".equals(file.getName())) {
+      return R.drawable.ic_terminal;
     }
+
+    return FileExtension.Factory.forFile(file).getIcon();
+  }
+
+  public void updateChevron(boolean expanded) {
+    setLoading(false);
+    updateChevronIcon(expanded);
+  }
+
+  public void setLoading(boolean loading) {
+    final int viewIndex;
+    if (loading) {
+      viewIndex = 1;
+    } else {
+      viewIndex = 0;
+    }
+
+    binding.chevronLoadingSwitcher.setDisplayedChild(viewIndex);
+  }
 }

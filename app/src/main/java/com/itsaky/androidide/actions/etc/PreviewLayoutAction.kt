@@ -18,45 +18,90 @@
 package com.itsaky.androidide.actions.etc
 
 import android.content.Context
+import android.content.Intent
+import android.view.MenuItem
 import androidx.core.content.ContextCompat
-import com.itsaky.androidide.R
+import com.android.aaptcompiler.AaptResourceType.LAYOUT
+import com.android.aaptcompiler.extractPathData
+import com.blankj.utilcode.util.KeyboardUtils
+import com.itsaky.androidide.activities.editor.EditorHandlerActivity
 import com.itsaky.androidide.actions.ActionData
 import com.itsaky.androidide.actions.EditorRelatedAction
-import com.itsaky.androidide.handlers.FileOptionsHandler
+import com.itsaky.androidide.actions.markInvisible
+import com.itsaky.androidide.editor.ui.IDEEditor
+import com.itsaky.androidide.resources.R
+import com.itsaky.androidide.uidesigner.UIDesignerActivity
+import java.io.File
 
 /** @author Akash Yadav */
 class PreviewLayoutAction() : EditorRelatedAction() {
 
-    override val id: String = "editor_previewLayout"
+  override val id: String = "editor_previewLayout"
 
-    constructor(context: Context) : this() {
-        label = context.getString(R.string.title_preview_layout)
-        icon = ContextCompat.getDrawable(context, R.drawable.ic_preview_layout)
+  constructor(context: Context) : this() {
+    label = context.getString(R.string.title_preview_layout)
+    icon = ContextCompat.getDrawable(context, R.drawable.ic_preview_layout)
+  }
+
+  override fun prepare(data: ActionData) {
+    super.prepare(data)
+
+    val viewModel = getActivity(data)!!.viewModel
+    if (viewModel.isInitializing) {
+      visible = true
+      enabled = false
+      return
     }
 
-    override fun prepare(data: ActionData) {
-        super.prepare(data)
-
-        if (!visible) {
-            return
-        }
-
-        val editor = getEditor(data)!!
-        val file = editor.file!!
-
-        val isXml = file.name.endsWith(".xml")
-
-        visible =
-            isXml &&
-                file.parentFile != null &&
-                Regex(FileOptionsHandler.LAYOUT_RES_PATH_REGEX)
-                    .matches(file.parentFile!!.absolutePath)
-        enabled = visible
+    if (!visible) {
+      return
     }
 
-    override fun execAction(data: ActionData): Any {
-        val activity = getActivity(data)!!
-        activity.previewLayout()
-        return true
+    val editor = data.requireEditor()
+    val file = editor.file!!
+
+    val isXml = file.name.endsWith(".xml")
+    
+    if (!isXml) {
+      markInvisible()
+      return
     }
+    
+    val type = try {
+      extractPathData(file).type
+    } catch (err: Throwable) {
+      markInvisible()
+      return
+    }
+
+    visible = type == LAYOUT
+    enabled = visible
+  }
+
+  override fun getShowAsActionFlags(data: ActionData): Int {
+    val activity = getActivity(data) ?: return super.getShowAsActionFlags(data)
+    return if (KeyboardUtils.isSoftInputVisible(activity)) {
+      MenuItem.SHOW_AS_ACTION_IF_ROOM
+    } else {
+      MenuItem.SHOW_AS_ACTION_ALWAYS
+    }
+  }
+
+  override fun execAction(data: ActionData): Boolean {
+    val activity = getActivity(data)!!
+    activity.saveAll()
+    activity.previewLayout(data.requireEditor().file!!)
+    return true
+  }
+
+  private fun EditorHandlerActivity.previewLayout(file: File) {
+    val intent = Intent(this, UIDesignerActivity::class.java)
+    intent.putExtra(UIDesignerActivity.EXTRA_FILE, file.absolutePath)
+    uiDesignerResultLauncher?.launch(intent)
+  }
+
+  private fun ActionData.requireEditor(): IDEEditor {
+    return getEditor(this)
+      ?: throw IllegalArgumentException("An editor instance is required but none was provided")
+  }
 }

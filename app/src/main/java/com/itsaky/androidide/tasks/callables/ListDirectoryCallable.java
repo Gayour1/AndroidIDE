@@ -29,25 +29,22 @@ import java.io.FileFilter;
 
 public class ListDirectoryCallable implements java.util.concurrent.Callable<String> {
 
-    private File file;
+  private final FileFilter ARCHIVE_FILTER =
+      new FileFilter() {
 
-    public ListDirectoryCallable(File file) {
-        this.file = file;
-    }
+        @Override
+        public boolean accept(File p1) {
+          return p1.isFile() && (p1.getName().endsWith(".tar.xz") || p1.getName().endsWith(".zip"));
+        }
+      };
+  private File file;
 
-    @Override
-    public String call() throws Exception {
-        return TextUtils.join(
-                "\n", FileUtils.listFilesInDirWithFilter(file, ARCHIVE_FILTER, false));
-    }
+  public ListDirectoryCallable(File file) {
+    this.file = file;
+  }
 
-    private final FileFilter ARCHIVE_FILTER =
-            new FileFilter() {
-
-                @Override
-                public boolean accept(File p1) {
-                    return p1.isFile()
-                            && (p1.getName().endsWith(".tar.xz") || p1.getName().endsWith(".zip"));
-                }
-            };
+  @Override
+  public String call() throws Exception {
+    return TextUtils.join("\n", FileUtils.listFilesInDirWithFilter(file, ARCHIVE_FILTER, false));
+  }
 }

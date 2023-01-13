@@ -30,56 +30,74 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.itsaky.androidide.adapters.SearchListAdapter;
-import com.itsaky.androidide.views.EmptyView;
+import com.itsaky.androidide.ui.EmptyView;
+
+import java.util.Collections;
+
+import kotlin.Unit;
 
 public class SearchResultFragment extends Fragment {
 
-    private RecyclerView list;
-    private EmptyView emptyView;
+  private RecyclerView list;
+  private EmptyView emptyView;
 
-    private SearchListAdapter unsavedAdapter;
+  private SearchListAdapter unsavedAdapter;
 
-    @Nullable
-    @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup parent,
-            @Nullable Bundle savedInstanceState) {
-        final var container = new LinearLayout(inflater.getContext());
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setLayoutParams(new ViewGroup.LayoutParams(-1, -1));
+  @Nullable
+  @Override
+  public View onCreateView(
+      @NonNull LayoutInflater inflater,
+      @Nullable ViewGroup parent,
+      @Nullable Bundle savedInstanceState) {
+    final var container = new LinearLayout(inflater.getContext());
+    container.setOrientation(LinearLayout.VERTICAL);
+    container.setLayoutParams(new ViewGroup.LayoutParams(-1, -1));
 
-        this.list = new RecyclerView(inflater.getContext());
-        this.emptyView = new EmptyView(inflater.getContext());
+    this.list = new RecyclerView(inflater.getContext());
+    this.emptyView = new EmptyView(inflater.getContext());
 
-        container.addView(list, new LinearLayout.LayoutParams(-1, -1));
-        container.addView(emptyView, new LinearLayout.LayoutParams(-1, -1));
+    container.addView(list, new LinearLayout.LayoutParams(-1, -1));
+    container.addView(emptyView, new LinearLayout.LayoutParams(-1, -1));
 
-        return container;
+    return container;
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+
+    list.setLayoutManager(new LinearLayoutManager(list.getContext()));
+    list.setAdapter(
+        unsavedAdapter != null
+            ? unsavedAdapter
+            : new SearchListAdapter(Collections.emptyMap(), this::noOp, this::noOp));
+    unsavedAdapter = null;
+  }
+
+  @Override
+  public void onDestroyView() {
+    super.onDestroyView();
+    unsavedAdapter = null;
+    list = null;
+    emptyView = null;
+  }
+
+  public void setAdapter(@NonNull final SearchListAdapter adapter) {
+    if (list == null) {
+      unsavedAdapter = adapter;
+      return;
     }
+    this.list.setAdapter(adapter);
+  }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        list.setLayoutManager(new LinearLayoutManager(list.getContext()));
-        list.setAdapter(
-                unsavedAdapter != null ? unsavedAdapter : new SearchListAdapter(null, null, null));
-        unsavedAdapter = null;
+  public void handleResultVisibility(boolean error) {
+    if (emptyView != null && list != null) {
+      emptyView.setVisibility(error ? View.VISIBLE : View.GONE);
+      list.setVisibility(error ? View.GONE : View.VISIBLE);
     }
+  }
 
-    public void setAdapter(@NonNull final SearchListAdapter adapter) {
-        if (list == null) {
-            unsavedAdapter = adapter;
-            return;
-        }
-        this.list.setAdapter(adapter);
-    }
-
-    public void handleResultVisibility(boolean error) {
-        if (emptyView != null && list != null) {
-            emptyView.setVisibility(error ? View.VISIBLE : View.GONE);
-            list.setVisibility(error ? View.GONE : View.VISIBLE);
-        }
-    }
+  private Unit noOp(Object obj) {
+    return Unit.INSTANCE;
+  }
 }

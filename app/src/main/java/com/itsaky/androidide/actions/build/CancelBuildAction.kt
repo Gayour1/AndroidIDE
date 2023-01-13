@@ -19,48 +19,65 @@ package com.itsaky.androidide.actions.build
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import com.itsaky.androidide.R
+import com.itsaky.androidide.resources.R
 import com.itsaky.androidide.actions.ActionData
 import com.itsaky.androidide.actions.EditorActivityAction
+import com.itsaky.androidide.actions.markInvisible
+import com.itsaky.androidide.lookup.Lookup
+import com.itsaky.androidide.projects.builder.BuildService
 import com.itsaky.androidide.utils.ILogger
 
 /** @author Akash Yadav */
 class CancelBuildAction() : EditorActivityAction() {
 
-    private val log = ILogger.newInstance(javaClass.simpleName)
+  private val log = ILogger.newInstance(javaClass.simpleName)
 
-    constructor(context: Context) : this() {
-        label = context.getString(R.string.title_cancel_build)
-        icon = ContextCompat.getDrawable(context, R.drawable.ic_stop_daemons)
+  constructor(context: Context) : this() {
+    label = context.getString(R.string.title_cancel_build)
+    icon = ContextCompat.getDrawable(context, R.drawable.ic_stop_daemons)
+  }
+
+  override val id: String = "editor_stopGradleDaemons"
+
+  override fun prepare(data: ActionData) {
+    super.prepare(data)
+
+    if (!visible) {
+      return
     }
 
-    override val id: String = "editor_stopGradleDaemons"
-
-    override fun prepare(data: ActionData) {
-        visible = true
-        enabled = true
+    val context = getActivity(data)
+    val buildService = Lookup.DEFAULT.lookup(BuildService.KEY_BUILD_SERVICE)
+    if (context == null || buildService == null) {
+      markInvisible()
+      return
     }
 
-    override fun execAction(data: ActionData): Boolean {
-        val context = getActivity(data) ?: return false
+    visible = true
+    enabled = buildService.isBuildInProgress
+  }
 
-        log.info("Sending build cancellation request...")
-        context.buildService.cancelCurrentBuild().whenComplete { result, error ->
-            if (error != null) {
-                log.error("Failed to send build cancellation request", error)
-                return@whenComplete
-            }
+  override fun execAction(data: ActionData): Boolean {
+    log.info("Sending build cancellation request...")
+    Lookup.DEFAULT.lookup(BuildService.KEY_BUILD_SERVICE)?.cancelCurrentBuild()?.whenComplete {
+      result,
+      error ->
+      if (error != null) {
+        log.error("Failed to send build cancellation request", error)
+        return@whenComplete
+      }
 
-            if (!result.wasEnqueued) {
-                log.warn(
-                    "Unable to enqueue cancellation request",
-                    result.failureReason,
-                    result.failureReason!!.message)
-                return@whenComplete
-            }
+      if (!result.wasEnqueued) {
+        log.warn(
+          "Unable to enqueue cancellation request",
+          result.failureReason,
+          result.failureReason!!.message
+        )
+        return@whenComplete
+      }
 
-            log.info("Build cancellation request was successfully enqueued...")
-        }
-        return true
+      log.info("Build cancellation request was successfully enqueued...")
     }
+    return true
+  }
 }

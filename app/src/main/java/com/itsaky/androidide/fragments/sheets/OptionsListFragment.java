@@ -30,72 +30,64 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.itsaky.androidide.adapters.OptionsSheetAdapter;
+import com.itsaky.androidide.events.FileContextMenuItemClickEvent;
 import com.itsaky.androidide.models.SheetOption;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class OptionsListFragment extends BaseBottomSheetFragment {
 
-    private final List<SheetOption> mOptions = new ArrayList<>();
-    protected boolean dismissOnItemClick = true;
-    private RecyclerView mList;
-    private OnOptionsClickListener listener;
+  private final List<SheetOption> mOptions = new ArrayList<>();
+  protected boolean dismissOnItemClick = true;
+  private RecyclerView mList;
 
-    @Override
-    protected void bind(@NonNull LinearLayout container) {
-        mList = new RecyclerView(requireContext());
-        container.removeAllViews();
-        container.addView(mList, new LinearLayout.LayoutParams(-1, -1));
-    }
+  @Override
+  public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    mList.setLayoutManager(new LinearLayoutManager(getContext()));
+    mList.setAdapter(
+        new OptionsSheetAdapter(
+            mOptions,
+            option -> {
+              if (dismissOnItemClick) dismiss();
+              final var event = new FileContextMenuItemClickEvent(option);
+              event.put(Context.class, requireContext());
+              EventBus.getDefault().post(event);
+            }));
+  }
 
-    @Override
-    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        mList.setLayoutManager(new LinearLayoutManager(getContext()));
-        mList.setAdapter(
-                new OptionsSheetAdapter(
-                        mOptions,
-                        __ -> {
-                            if (dismissOnItemClick) dismiss();
-                            if (listener != null) {
-                                listener.onOptionsClick(__);
-                            }
-                        }));
-    }
+  @Override
+  protected String getTitle() {
+    return getString(com.itsaky.androidide.resources.R.string.file_options);
+  }
 
-    @Override
-    public void onAttach(@NonNull Context context) {
-        super.onAttach(context);
-        this.listener = (OnOptionsClickListener) context;
-    }
+  @Override
+  protected void bind(@NonNull LinearLayout container) {
+    mList = new RecyclerView(requireContext());
+    container.removeAllViews();
+    container.addView(mList, new LinearLayout.LayoutParams(-1, -1));
+  }
 
-    public void addOption(SheetOption option) {
-        if (!mOptions.contains(option)) {
-            mOptions.add(option);
-        }
+  public void addOption(SheetOption option) {
+    if (!mOptions.contains(option)) {
+      mOptions.add(option);
     }
+  }
 
-    public OptionsListFragment removeOption(int optionIndex) {
-        return removeOption(mOptions.get(optionIndex));
-    }
+  public OptionsListFragment removeOption(int optionIndex) {
+    return removeOption(mOptions.get(optionIndex));
+  }
 
-    public OptionsListFragment removeOption(SheetOption option) {
-        mOptions.remove(option);
-        return this;
-    }
+  public OptionsListFragment removeOption(SheetOption option) {
+    mOptions.remove(option);
+    return this;
+  }
 
-    public OptionsListFragment setDismissOnItemClick(boolean dissmiss) {
-        this.dismissOnItemClick = dissmiss;
-        return this;
-    }
-
-    @Override
-    protected String getTitle() {
-        return getString(com.itsaky.androidide.R.string.file_options);
-    }
-
-    public static interface OnOptionsClickListener {
-        void onOptionsClick(SheetOption option);
-    }
+  public OptionsListFragment setDismissOnItemClick(boolean dissmiss) {
+    this.dismissOnItemClick = dissmiss;
+    return this;
+  }
 }

@@ -19,43 +19,50 @@ package com.itsaky.androidide.actions.etc
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import com.itsaky.androidide.R
+import com.itsaky.androidide.resources.R
 import com.itsaky.androidide.actions.ActionData
 import com.itsaky.androidide.actions.EditorActivityAction
+import com.itsaky.androidide.actions.markInvisible
+import com.itsaky.androidide.projects.ProjectManager
 
 /** @author Akash Yadav */
 class FindInProjectAction() : EditorActivityAction() {
 
-    override var requiresUIThread: Boolean = true
+  override var requiresUIThread: Boolean = true
 
-    constructor(context: Context) : this() {
-        label = context.getString(R.string.menu_find_project)
-        icon = ContextCompat.getDrawable(context, R.drawable.ic_search_project)
+  constructor(context: Context) : this() {
+    label = context.getString(R.string.menu_find_project)
+    icon = ContextCompat.getDrawable(context, R.drawable.ic_search_project)
+  }
+
+  override val id: String = "editor_findInProject"
+
+  override fun prepare(data: ActionData) {
+    getActivity(data)
+      ?: run {
+        markInvisible()
+        return
+      }
+
+    val root = ProjectManager.rootProject
+    if (root == null || root.subModules.isEmpty()) {
+      markInvisible()
+      return
     }
 
-    override val id: String = "editor_findInProject"
+    visible = true
+    enabled = true
+  }
 
-    override fun prepare(data: ActionData) {
-        getActivity(data)
-            ?: run {
-                visible = false
-                enabled = false
-                return
-            }
+  override fun execAction(data: ActionData): Boolean {
+    val context = getActivity(data) ?: return false
+    val dialog = context.findInProjectDialog
 
-        visible = true
-        enabled = true
+    return if (dialog != null) {
+      dialog.show()
+      true
+    } else {
+      false
     }
-
-    override fun execAction(data: ActionData): Boolean {
-        val context = getActivity(data) ?: return false
-        val dialog = context.findInProjectDialog
-
-        return if (dialog != null) {
-            dialog.show()
-            true
-        } else {
-            false
-        }
-    }
+  }
 }

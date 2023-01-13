@@ -16,7 +16,6 @@
  */
 package com.itsaky.androidide.gradle.plugin
 
-
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -35,8 +34,10 @@ class AndroidIDEPlugin implements Plugin<Project> {
         }
         
         if (isApp) {
-            project.android.sourceSets {
-                main.java.srcDirs += "${System.getenv ("HOME")}/logsender"
+            project.afterEvaluate {
+                project.android.sourceSets {
+                    main.java.srcDirs += "${System.getenv ("HOME")}/logsender"
+                }
             }
         }
     }

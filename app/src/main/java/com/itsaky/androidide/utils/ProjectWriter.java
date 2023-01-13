@@ -20,205 +20,320 @@
 
 package com.itsaky.androidide.utils;
 
+import static java.lang.Character.isUpperCase;
+import static java.lang.Character.toLowerCase;
+
 import androidx.annotation.NonNull;
 
 import com.blankj.utilcode.util.FileIOUtils;
 import com.blankj.utilcode.util.FileUtils;
 import com.blankj.utilcode.util.ResourceUtils;
 import com.blankj.utilcode.util.ThreadUtils;
-import com.blankj.utilcode.util.ZipUtils;
-import com.itsaky.androidide.R;
-import com.itsaky.androidide.app.StudioApp;
+import com.itsaky.androidide.resources.R;
+import com.itsaky.androidide.app.IDEApplication;
 import com.itsaky.androidide.interfaces.ProjectWriterCallback;
 import com.itsaky.androidide.models.NewProjectDetails;
 import com.itsaky.androidide.models.ProjectTemplate;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import kotlin.text.StringsKt;
 
 public class ProjectWriter {
 
-    private static ProjectWriterCallback callback;
+  private static final String XML_TEMPLATE_PATH = "templates/xml";
+  private static final String SOURCE_PATH_REGEX = "/.*/src/.*/java|kt";
+  private static final String FILE_EXT_REGEX = ".*/java|kt|gradle|xml|txt|cpp";
+  private static final String APP_NAME = "$app_name",
+      PACKAGE_NAME = "$package_name",
+      MIN_SDK = "$min_sdk",
+      TARGET_SDK = "$target_sdk",
+      PACKAGE_NAME_CPP = "{$package_name_cpp}",
+      CPP_FLAGS = "$cpp_flags",
+      LIBRARY_NAME = "$library_name";
+  private static ProjectWriterCallback callback;
 
-    private static final String XML_TEMPLATE_PATH = "templates/xml";
+  @NonNull
+  public static String createMenu() {
+    return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/menu.xml");
+  }
 
-    private static final String[] FILE_TO_CHANGE = {
-        "build.gradle",
-        "settings.gradle",
-        "app/src/main/AndroidManifest.xml",
-        "app/src/main/res/values/strings.xml",
-        "app/src/main/java/$package_name/MainActivity.java",
-        "app/src/main/java/$package_name/MainActivity.kt",
-        "app/build.gradle",
-        "app/src/main/java/$package_name/AndroidLauncher.java",
-        "app/res/values/strings.xml",
-        "core/build.gradle",
-        "core/src/main/java/$package_name/GameSuperClass.java",
-        "app/AndroidManifest.xml"
-    };
+  @NonNull
+  public static String createDrawable() {
+    return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/drawable.xml");
+  }
 
-    private static final String JAVA_PATH_REGEX = "/.*/src/.*/java|kt";
-    private static final String APP_NAME = "$app_name",
-            PACKAGE_NAME = "$package_name",
-            MIN_SDK = "$min_sdk",
-            TARGET_SDK = "$target_sdk";
+  @NonNull
+  public static String createLayout() {
+    return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/layout.xml");
+  }
 
-    @NonNull
-    public static String createMenu() {
-        return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/menu.xml");
+  @NonNull
+  public static String createLayoutName(String name) {
+    final var nameWithoutExtension = StringsKt.substringBeforeLast(name, '.', name);
+    var baseName = nameWithoutExtension;
+    if (baseName.endsWith("Activity")) {
+      baseName = StringsKt.substringBeforeLast(baseName, "Activity", baseName);
+      baseName = "activity" + baseName;
+    } else if (baseName.endsWith("Fragment")) {
+      baseName = StringsKt.substringBeforeLast(baseName, "Fragment", baseName);
+      baseName = "fragment" + baseName;
+    } else {
+      baseName = "layout" + baseName;
     }
 
-    @NonNull
-    public static String createDrawable() {
-        return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/drawable.xml");
+    final var sb = new StringBuilder();
+    var hasUpper = false;
+    for (int i = 0; i < baseName.length(); i++) {
+      final char c = baseName.charAt(i);
+      if (isUpperCase(c)) {
+        hasUpper = true;
+        sb.append("_");
+        sb.append(toLowerCase(c));
+        continue;
+      }
+
+      sb.append(c);
     }
 
-    @NonNull
-    public static String createLayout() {
-        return ResourceUtils.readAssets2String(XML_TEMPLATE_PATH + "/layout.xml");
+    if (!hasUpper) {
+      sb.delete(0, sb.length());
+      sb.append("layout_");
+      sb.append(nameWithoutExtension);
     }
 
-    public static String getPackageName(File parentPath) {
-        Matcher pkgMatcher = Pattern.compile(JAVA_PATH_REGEX).matcher(parentPath.getAbsolutePath());
-        if (pkgMatcher.find()) {
-            int end = pkgMatcher.end();
-            if (end <= 0) return "";
-            String name = parentPath.getAbsolutePath().substring(pkgMatcher.end());
-            if (name.startsWith(File.separator)) name = name.substring(1);
-            return name.replace(File.separator, ".");
-        }
-        return null;
+    sb.append(".xml");
+
+    return sb.toString();
+  }
+
+  public static String getPackageName(File parentPath) {
+    Matcher pkgMatcher = Pattern.compile(SOURCE_PATH_REGEX).matcher(parentPath.getAbsolutePath());
+    if (pkgMatcher.find()) {
+      int end = pkgMatcher.end();
+      if (end <= 0) return "";
+      String name = parentPath.getAbsolutePath().substring(pkgMatcher.end());
+      if (name.startsWith(File.separator)) name = name.substring(1);
+      return name.replace(File.separator, ".");
     }
+    return null;
+  }
 
-    public static String createJavaClass(String packageName, String className) {
-        return ClassBuilder.createClass(packageName, className);
+  public static String createJavaClass(String packageName, String className) {
+    return ClassBuilder.createClass(packageName, className);
+  }
+
+  public static String createJavaInterface(String packageName, String className) {
+    return ClassBuilder.createInterface(packageName, className);
+  }
+
+  public static String createJavaEnum(String packageName, String className) {
+    return ClassBuilder.createEnum(packageName, className);
+  }
+
+  public static String createActivity(String packageName, String className) {
+    return ClassBuilder.createActivity(packageName, className);
+  }
+
+  public static void write(
+      ProjectTemplate template, NewProjectDetails details, ProjectWriterCallback listener)
+      throws Exception {
+    write(template.getId(), details, listener);
+  }
+
+  public static void write(int id, NewProjectDetails details, ProjectWriterCallback listener)
+      throws Exception {
+    callback = listener;
+    notifyBegin();
+    final IDEApplication instance = IDEApplication.getInstance();
+    final File tempDir = instance.getTempProjectDir();
+    final File projectDir = new File(details.savePath);
+    if (projectDir.exists()) {
+      notifyFailed(instance.getString(R.string.project_exists));
+      return;
     }
-
-    public static String createJavaInterface(String packageName, String className) {
-        return ClassBuilder.createInterface(packageName, className);
+    if (tempDir == null) {
+      notifyFailed(instance.getString(R.string.cannot_create_temp));
     }
-
-    public static String createJavaEnum(String packageName, String className) {
-        return ClassBuilder.createEnum(packageName, className);
+    if (!FileUtils.delete(tempDir) || !Environment.mkdirIfNotExits(tempDir).exists()) {
+      notifyFailed(instance.getString(R.string.cannot_create_temp));
     }
-
-    public static String createActivity(String packageName, String className) {
-        return ClassBuilder.createActivity(packageName, className);
-    }
-
-    public static void write(
-            ProjectTemplate template, NewProjectDetails details, ProjectWriterCallback listener)
-            throws Exception {
-        write(template.getId(), details, listener);
-    }
-
-    public static void write(int id, NewProjectDetails details, ProjectWriterCallback listener)
-            throws Exception {
-        callback = listener;
-        notifyBegin();
-        final StudioApp instance = StudioApp.getInstance();
-        final File temp = instance.getTempProjectDir();
-        final File projectDir = new File(instance.getProjectsDir(), details.name);
-        if (projectDir.exists()) {
-            notifyFailed(instance.getString(R.string.project_exists));
-            return;
-        }
-        if (temp == null) notifyFailed(instance.getString(R.string.cannot_create_temp));
-        if (!FileUtils.delete(temp) || !Environment.mkdirIfNotExits(temp).exists())
-            notifyFailed(instance.getString(R.string.cannot_create_temp));
-        notifyTask(instance.getString(R.string.copying_assets));
-        projectDir.mkdirs();
-        File destZip = new File(Environment.TMP_DIR, "templates/" + id + ".zip");
-        Environment.mkdirIfNotExits(destZip.getParentFile());
-        if (ResourceUtils.copyFileFromAssets(
-                "templates/" + destZip.getName(), destZip.getAbsolutePath())) {
-            ZipUtils.unzipFile(destZip, temp);
-            notifyTask(instance.getString(R.string.writing_files));
-            for (String s : FILE_TO_CHANGE) {
-                File file = new File(temp, s);
-                if (file.exists() && s.contains(PACKAGE_NAME)) {
-                    s = s.replace(PACKAGE_NAME, details.packageName.replace(".", "/"));
-                    File f = new File(temp, s);
-                    FileUtils.move(file, f);
-
-                    try {
-                        File f2 = file.getParentFile();
-                        while (f2 != null && !f2.getName().contains(PACKAGE_NAME)) {
-                            f2 = f2.getParentFile();
-                        }
-
-                        FileUtils.delete(f2);
-                    } catch (Throwable t) {
-                        // ignored
-                    }
-                    file = f;
-                }
-                if (file.exists()) {
-                    String read = FileIOUtils.readFile2String(file);
-                    read =
-                            read.replace(APP_NAME, details.name)
-                                    .replace(PACKAGE_NAME, details.packageName)
-                                    .replace(MIN_SDK, String.valueOf(details.minSdk))
-                                    .replace(TARGET_SDK, String.valueOf(details.targetSdk));
-                    if (!FileIOUtils.writeFileFromString(file, read, false)) {
-                        notifyFailed(
-                                instance.getString(R.string.failed_write_file, file.getName()));
-                    }
-                }
-            }
-            notifyTask(instance.getString(R.string.copying_files));
-            if (FileUtils.createOrExistsDir(projectDir)) {
-                boolean success = true;
-                final var files = temp == null ? null : temp.listFiles();
-                if (files == null) {
-                    success = false;
-                } else {
-                    for (File f : files) {
-                        if (!(success &= FileUtils.copy(f, new File(projectDir, f.getName())))) {
-                            notifyFailed(
-                                    instance.getString(R.string.failed_write_file, f.getName()));
-                            break;
-                        }
-                    }
-                }
-
-                if (success) {
-                    notifySuccess(projectDir);
-                }
-            } else {
-                notifyFailed(instance.getString(R.string.failed_create_project_dir));
-            }
+    notifyTask(instance.getString(R.string.copying_assets));
+    projectDir.mkdirs();
+    File destZip = new File(Environment.TMP_DIR, "templates/" + id + ".zip");
+    Environment.mkdirIfNotExits(destZip.getParentFile());
+    if (ResourceUtils.copyFileFromAssets(
+        "templates/" + destZip.getName(), destZip.getAbsolutePath())) {
+      unzipTemplate(destZip, tempDir, details);
+      notifyTask(instance.getString(R.string.writing_files));
+      notifyTask(instance.getString(R.string.copying_files));
+      if (FileUtils.createOrExistsDir(projectDir)) {
+        boolean success = true;
+        final var files = tempDir == null ? null : tempDir.listFiles();
+        if (files == null) {
+          success = false;
         } else {
-            notifyFailed(instance.getString(R.string.asset_copy_failed));
+          for (File f : files) {
+            if (!(success &= FileUtils.copy(f, new File(projectDir, f.getName())))) {
+              notifyFailed(instance.getString(R.string.failed_write_file, f.getName()));
+              break;
+            }
+          }
         }
-    }
 
-    private static void notifyBegin() {
-        ThreadUtils.runOnUiThread(
-                () -> {
-                    if (callback != null) callback.beforeBegin();
-                });
+        if (success) {
+          notifySuccess(projectDir);
+        }
+      } else {
+        notifyFailed(instance.getString(R.string.failed_create_project_dir));
+      }
+    } else {
+      notifyFailed(instance.getString(R.string.asset_copy_failed));
     }
+  }
 
-    private static void notifyTask(String name) {
-        ThreadUtils.runOnUiThread(
-                () -> {
-                    if (callback != null) callback.onProcessTask(name);
-                });
-    }
+  private static void unzipTemplate(File zipFile, File location, NewProjectDetails details)
+      throws IOException {
+    final IDEApplication instance = IDEApplication.getInstance();
+    int size;
+    final int BUFFER_SIZE = 2048;
+    byte[] buffer = new byte[BUFFER_SIZE];
 
-    private static void notifySuccess(File root) {
-        ThreadUtils.runOnUiThread(
-                () -> {
-                    if (callback != null) callback.onSuccess(root);
-                });
+    File f = location;
+    if (!f.isDirectory()) {
+      f.mkdirs();
     }
+    try (ZipInputStream zin =
+        new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile), BUFFER_SIZE))) {
+      ZipEntry ze;
+      while ((ze = zin.getNextEntry()) != null) {
+        final var prefix = details.language.toLowerCase(Locale.ROOT);
+        if (ze.getName().startsWith(prefix) && !ze.isDirectory()) {
+          String name = ze.getName().replaceFirst(prefix, "");
+          if (name.contains(PACKAGE_NAME)) {
+            name = name.replace(PACKAGE_NAME, details.packageName.replace(".", "/"));
+          }
+          String path = location.getAbsolutePath() + "/" + name;
+          File unzipFile = new File(path);
 
-    private static void notifyFailed(String reason) {
-        ThreadUtils.runOnUiThread(
-                () -> {
-                    if (callback != null) callback.onFailed(reason);
-                });
+          if (ze.isDirectory()) {
+            if (!unzipFile.isDirectory()) {
+              unzipFile.mkdirs();
+            }
+          } else {
+            // check for and create parent directories if they don't exist
+            File parentDir = unzipFile.getParentFile();
+            if (null != parentDir) {
+              if (!parentDir.isDirectory()) {
+                parentDir.mkdirs();
+              }
+            }
+
+            // unzip the file
+            FileOutputStream out = new FileOutputStream(unzipFile, false);
+            BufferedOutputStream fout = new BufferedOutputStream(out, BUFFER_SIZE);
+            try {
+              while ((size = zin.read(buffer, 0, BUFFER_SIZE)) != -1) {
+                fout.write(buffer, 0, size);
+              }
+              zin.closeEntry();
+            } finally {
+              fout.flush();
+              fout.close();
+            }
+
+            // replace temp variables to real
+            Matcher extMatcher = Pattern.compile(FILE_EXT_REGEX).matcher(name);
+            if (extMatcher.find()) {
+              String fileContent = FileIOUtils.readFile2String(unzipFile);
+
+              fileContent = customReplaceAll(fileContent, APP_NAME, details.name);
+              fileContent =
+                  customReplaceAll(
+                      fileContent,
+                      PACKAGE_NAME_CPP,
+                      String.valueOf(details.packageName.replace("_", "_1").replace('.', '_')));
+              fileContent = customReplaceAll(fileContent, PACKAGE_NAME, details.packageName);
+              fileContent = customReplaceAll(fileContent, MIN_SDK, String.valueOf(details.minSdk));
+              fileContent =
+                  customReplaceAll(fileContent, TARGET_SDK, String.valueOf(details.targetSdk));
+              fileContent = customReplaceAll(fileContent, CPP_FLAGS, details.cppFlags);
+              fileContent =
+                  customReplaceAll(
+                      fileContent,
+                      LIBRARY_NAME,
+                      details.packageName.substring(details.packageName.lastIndexOf('.') + 1));
+              if (!FileIOUtils.writeFileFromString(unzipFile, fileContent, false)) {
+                notifyFailed(instance.getString(R.string.failed_write_file, unzipFile.getName()));
+              }
+            }
+          }
+        }
+      }
     }
+  }
+
+  public static String customReplaceAll(String str, String oldStr, String newStr) {
+
+    if ("".equals(str) || "".equals(oldStr) || oldStr.equals(newStr)) {
+      return str;
+    }
+    if (newStr == null) {
+      newStr = "";
+    }
+    final int strLength = str.length();
+    final int oldStrLength = oldStr.length();
+    StringBuilder builder = new StringBuilder(str);
+
+    for (int i = 0; i < strLength; i++) {
+      int index = builder.indexOf(oldStr, i);
+
+      if (index == -1) {
+        if (i == 0) {
+          return str;
+        }
+        return builder.toString();
+      }
+      builder = builder.replace(index, index + oldStrLength, newStr);
+    }
+    return builder.toString();
+  }
+
+  private static void notifyBegin() {
+    ThreadUtils.runOnUiThread(
+        () -> {
+          if (callback != null) callback.beforeBegin();
+        });
+  }
+
+  private static void notifyTask(String name) {
+    ThreadUtils.runOnUiThread(
+        () -> {
+          if (callback != null) callback.onProcessTask(name);
+        });
+  }
+
+  private static void notifySuccess(File root) {
+    ThreadUtils.runOnUiThread(
+        () -> {
+          if (callback != null) callback.onSuccess(root);
+        });
+  }
+
+  private static void notifyFailed(String reason) {
+    ThreadUtils.runOnUiThread(
+        () -> {
+          if (callback != null) callback.onFailed(reason);
+        });
+  }
 }

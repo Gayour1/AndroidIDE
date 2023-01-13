@@ -17,7 +17,12 @@
 
 package com.itsaky.androidide.actions
 
-import com.itsaky.androidide.EditorActivity
+import android.text.TextUtils
+import com.itsaky.androidide.lookup.Lookup
+import com.itsaky.androidide.projects.builder.BuildService
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult
+import com.itsaky.androidide.tooling.api.messages.result.TaskExecutionResult.Failure.UNKNOWN
+import com.itsaky.androidide.utils.ILogger
 
 /**
  * Marker class for actions that execute build related tasks.
@@ -26,30 +31,62 @@ import com.itsaky.androidide.EditorActivity
  */
 abstract class BaseBuildAction : EditorActivityAction() {
 
-    override fun prepare(data: ActionData) {
-        val context = getActivity(data)
-        if (context == null) {
-            visible = false
-            return
-        } else {
-            visible = true
-        }
+  protected val log: ILogger = ILogger.newInstance(javaClass.simpleName)
+  protected val buildService: BuildService?
+    get() = Lookup.DEFAULT.lookup(BuildService.KEY_BUILD_SERVICE)
 
-        if (isBuildInProgress(context)) {
-            enabled = false
-            return
-        } else {
-            enabled = true
-        }
+  override fun prepare(data: ActionData) {
+    val context = getActivity(data)
+    if (context == null) {
+      visible = false
+      return
+    } else {
+      visible = true
     }
 
-    override fun postExec(data: ActionData, result: Any) {
-        val context = getActivity(data) ?: return
-        context.invalidateOptionsMenu()
+    if (isBuildInProgress()) {
+      enabled = false
+      return
+    } else {
+      enabled = true
+    }
+  }
+  
+  fun shouldPrepare() = visible && enabled
+
+  private fun isBuildInProgress(): Boolean {
+    return buildService == null || buildService?.isBuildInProgress == true
+  }
+
+  @JvmOverloads
+  protected fun execTasks(
+    data: ActionData,
+    resultHandler: (TaskExecutionResult?) -> Unit = {},
+    vararg tasks: String,
+  ) {
+
+    if (buildService == null) {
+      return
     }
 
-    fun shouldPrepare() = visible && enabled
+    val activity =
+      getActivity(data)
+        ?: run {
+          resultHandler(TaskExecutionResult(false, UNKNOWN))
+          return
+        }
 
-    private fun isBuildInProgress(activity: EditorActivity): Boolean =
-        activity.buildService == null || activity.buildService.isBuildInProgress
+    activity.saveAll()
+    activity.runOnUiThread {
+      activity.appendBuildOutput("Executing tasks: " + TextUtils.join(", ", tasks))
+    }
+
+    buildService!!.executeTasks(tasks = tasks).whenComplete { result, err ->
+      if (result == null || err != null) {
+        log.error("Tasks failed to execute", TextUtils.join(", ", tasks))
+      }
+
+      resultHandler(result)
+    }
+  }
 }

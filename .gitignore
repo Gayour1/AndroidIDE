@@ -1,3 +1,6 @@
+# Downloaded signing key
+signing-key.jks
+
 # Built application files
 *.apk
 *.aar
@@ -11,14 +14,13 @@
 *.class
 
 # Generated files
-bin/
-gen/
-out/
+/bin/
+/gen/
+/out/
 #  Uncomment the following line in case you need and you don't have the release build type files in your app
 # Gradle files
 .gradle/
-./build/
-./build/translation-reports
+/build/
 
 # Local configuration file (sdk path, etc)
 local.properties
